@@ -28,6 +28,10 @@
 - (Linux in backround one port) `screen dotnet ProxyScanSharp.dll 3128 1 Valid.txt 200 2 https://ipv4.icanhazip.com`
 - (Windows) `ProxyScanSharp.exe 3128 1 Valid.txt 200 2 https://ipv4.icanhazip.com`
 
+# Best Config (Most Used Ports)
+- (Linux) `screen dotnet ProxyScanSharp.dll 3128,80,8080,8118,999 1000 Valid.txt 200 2 https://ipv4.icanhazip.com`
+- (Windows) `ProxyScanSharp.exe 3128,80,8080,8118,999 1000 Valid.txt 200 2 https://ipv4.icanhazip.com`
+
 # Future Plans
 - Configurable Scan only cloud ranges
 - Configurable Scan ranges
