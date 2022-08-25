@@ -17,10 +17,8 @@ namespace ProxyScanSharp
                 {
                     LogLock.AcquireReaderLock(int.MaxValue);
 
-                    using (var stream = new StreamWriter("Valid.txt", true))
-                    {
-                        stream.WriteLine(proxy);
-                    }
+                    using var stream = new StreamWriter("Valid.txt", true);
+                    stream.WriteLine(proxy);
                 }
             }
             finally
@@ -29,54 +27,47 @@ namespace ProxyScanSharp
             }
         }
         
-        static async Task<bool> PortCheck(string proxy, int port)
+        static bool PortCheck(string proxy, int port)
         {
-            using (TcpClient tcpClient = new TcpClient())
+            using TcpClient tcpClient = new();
+            try
             {
-                try
+                if (tcpClient.ConnectAsync(proxy, port).Wait(TimeSpan.FromMilliseconds(200)))
                 {
-                    if (tcpClient.ConnectAsync(proxy, port).Wait(TimeSpan.FromMilliseconds(200)))
-                    {
-                        Console.ForegroundColor = ConsoleColor.Green;
-                        Console.WriteLine("[Port Open] " + proxy + ":" + port);
-                        return true;
-                    }
-                    else
-                    {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine("[Port Closed] " + proxy + ":" + port);
-                        return false;
-                    }
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.WriteLine("[Port Open] " + proxy + ":" + port);
                     return true;
                 }
-                catch (Exception)
+                else
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine("[Port Closed] " + proxy + ":" + port);
                     return false;
                 }
             }
+            catch (Exception)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("[Port Closed] " + proxy + ":" + port);
+                return false;
+            }
         }
         static async Task<bool> CheckProxy(string proxy, int port)
         {
-            using (HttpClient HttpClient = new HttpClient(new HttpClientHandler { Proxy = new WebProxy(proxy, port)}))
+            using HttpClient HttpClient = new(new HttpClientHandler { Proxy = new WebProxy(proxy, port) });
+            try
             {
-                try
-                {
-                    HttpClient.Timeout = TimeSpan.FromSeconds(2);
-                    await HttpClient.GetAsync("https://ipv4.icanhazip.com");
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine("[Valid] " + proxy + ":" + port);
-                    return true;
-                }
-                catch (Exception)
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("[Invalid] " + proxy + ":" + port);
-                    return false;
-                }
+                HttpClient.Timeout = TimeSpan.FromSeconds(2);
+                await HttpClient.GetAsync("https://ipv4.icanhazip.com");
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("[Valid] " + proxy + ":" + port);
+                return true;
+            }
+            catch (Exception)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("[Invalid] " + proxy + ":" + port);
+                return false;
             }
         }
 
@@ -90,7 +81,7 @@ namespace ProxyScanSharp
                 {
                     if (proxy != null)
                     {
-                        if (await PortCheck(proxy, Convert.ToInt32(args[0])))
+                        if (PortCheck(proxy, Convert.ToInt32(args[0])))
                         {
                             if (await CheckProxy(proxy, Convert.ToInt32(args[0])))
                             {
@@ -100,7 +91,7 @@ namespace ProxyScanSharp
                     }
                     await Task.Delay(TimeSpan.FromMilliseconds(1));
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     await Task.Delay(TimeSpan.FromMilliseconds(1));
                 }
@@ -110,7 +101,7 @@ namespace ProxyScanSharp
         {
             await Task.Run(() =>
             {
-                List<Task> Threads = new List<Task>();
+                List<Task> Threads = new();
 
                 for (int i = 0; i < Convert.ToInt32(args[1]); i++)
                 {

@@ -4,6 +4,7 @@
 - Configurable
 - Linux and Windows support
 - Scans random IP's per request
+- Multithreading support
 
 # Setup
 - Ubuntu Net 6 (https://docs.microsoft.com/en-us/dotnet/core/install/linux-ubuntu)
