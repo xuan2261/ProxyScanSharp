@@ -7,7 +7,7 @@
 - Multithreading support
 - Multiple ports support
 - Custom timeouts support
-- Custom domain Check support
+- Custom domain check support
 
 # Setup
 - Ubuntu Net 6 (https://docs.microsoft.com/en-us/dotnet/core/install/linux-ubuntu)
