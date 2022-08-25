@@ -9,7 +9,7 @@ namespace ProxyScanSharp
     {
         private static readonly ReaderWriterLock LogLock = new();
 
-        static void WriteProxy(string proxy)
+        static void WriteProxy(string filename, string proxy)
         {
             try
             {
@@ -17,7 +17,7 @@ namespace ProxyScanSharp
                 {
                     LogLock.AcquireReaderLock(int.MaxValue);
 
-                    using var stream = new StreamWriter("Valid.txt", true);
+                    using var stream = new StreamWriter(filename, true);
                     stream.WriteLine(proxy);
                 }
             }
@@ -27,12 +27,12 @@ namespace ProxyScanSharp
             }
         }
         
-        static bool PortCheck(string proxy, int port)
+        static bool PortCheck(string proxy, int port, int timeout)
         {
-            using TcpClient tcpClient = new();
             try
             {
-                if (tcpClient.ConnectAsync(proxy, port).Wait(TimeSpan.FromMilliseconds(200)))
+                using TcpClient tcpClient = new();
+                if (tcpClient.ConnectAsync(proxy, port).Wait(TimeSpan.FromMilliseconds(timeout)))
                 {
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.WriteLine("[Port Open] " + proxy + ":" + port);
@@ -52,13 +52,13 @@ namespace ProxyScanSharp
                 return false;
             }
         }
-        static async Task<bool> CheckProxy(string proxy, int port)
+        static async Task<bool> CheckProxy(string proxy, int port, int timeout, string url)
         {
-            using HttpClient HttpClient = new(new HttpClientHandler { Proxy = new WebProxy(proxy, port) });
             try
             {
-                HttpClient.Timeout = TimeSpan.FromSeconds(2);
-                await HttpClient.GetAsync("https://ipv4.icanhazip.com");
+                using HttpClient HttpClient = new(new HttpClientHandler { Proxy = new WebProxy(proxy, port) });
+                HttpClient.Timeout = TimeSpan.FromSeconds(timeout);
+                await HttpClient.GetAsync(url);
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine("[Valid] " + proxy + ":" + port);
                 return true;
@@ -75,24 +75,30 @@ namespace ProxyScanSharp
         {
             while (true)
             {
-                var randomizer = RandomizerFactory.GetRandomizer(new FieldOptionsIPv4Address());
-                var proxy = randomizer.Generate();
                 try
                 {
-                    if (proxy != null)
+                    var randomizer = RandomizerFactory.GetRandomizer(new FieldOptionsIPv4Address());
+                    var ip = randomizer.Generate();
+
+                    if (!string.IsNullOrEmpty(ip))
                     {
-                        if (PortCheck(proxy, Convert.ToInt32(args[0])))
+                        foreach(string port in args[0].Split(','))
                         {
-                            if (await CheckProxy(proxy, Convert.ToInt32(args[0])))
+                            if (PortCheck(ip, Convert.ToInt32(port), Convert.ToInt32(args[3])))
                             {
-                                WriteProxy(proxy + ":" + Convert.ToInt32(args[0]));
+                                if (await CheckProxy(ip, Convert.ToInt32(port), Convert.ToInt32(args[4]), args[5]))
+                                {
+                                    WriteProxy(args[2], ip + ":" + port);
+                                    break;
+                                }
                             }
                         }
                     }
                     await Task.Delay(TimeSpan.FromMilliseconds(1));
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    Console.WriteLine(ex.ToString());
                     await Task.Delay(TimeSpan.FromMilliseconds(1));
                 }
             }
@@ -119,9 +125,9 @@ namespace ProxyScanSharp
                 Console.WriteLine("Invalid amount of threads");
                 return;
             }
-            if (args.Length != 2)
+            if (args.Length != 6)
             {
-                Console.WriteLine("Invalid amount of threads");
+                Console.WriteLine("Invalid amount of arguments <ports> <threads> <filename> <port_timeout_ms> <proxy_timeout_seconds> <url_to_check>");
                 return;
             }
             MainAsync(args).Wait();
